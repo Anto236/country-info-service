@@ -52,27 +52,89 @@ mvn clean package
 
 ## Docker
 
+To run the application in Docker, you need a `.env` file with your database credentials. The file is not included in the repo (it contains secrets).
+
+**1. Create your `.env` file**
+
+Copy `.env.example` to `.env`, then replace the placeholder values with your own MSSQL credentials:
+
 ```bash
-# Build image
-docker build -t country-info-service .
-
-# Create .env from template (edit with your credentials)
 cp .env.example .env
+```
 
-# Run using .env for credentials
+Edit `.env` and substitute only the credentials—keep the same format and variable names:
+
+```
+SPRING_DATASOURCE_URL=jdbc:sqlserver://host.docker.internal:1433;databaseName=countrydb;encrypt=true;trustServerCertificate=true
+SPRING_DATASOURCE_USERNAME=your_db_username
+SPRING_DATASOURCE_PASSWORD=your_db_password
+```
+
+- **URL:** For local MSSQL, use `host.docker.internal` to reach your host from the container (adjust the port if your instance uses a different one). For a hosted DB instance, replace with your connection string—the server name can be a hostname or IP address.
+- **Username / Password:** Use the SQL user that has access to `countrydb`.
+
+**2. Build and run**
+
+```bash
+docker build -t country-info-service .
 docker run -p 8081:8081 --env-file .env country-info-service
 ```
 
-Use `host.docker.internal` in the datasource URL to reach MSSQL on the host from the container. `.env` is gitignored.
+**3. Test the APIs with Swagger UI**
+
+Once the container is running, open **http://localhost:8081/swagger-ui.html** in your browser. From there you can:
+
+1. Browse all endpoints
+2. Click an endpoint → **Try it out** → **Execute**
+3. View the response
+
+Swagger UI is the recommended way to test the APIs when running via Docker.
 
 ## Database
 
-SQL authentication. Connection configured in `application.yml`:
-- **Server:** DESKTOP-K0286QP\SQLEXPRESS
-- **Database:** master
-- **User:** zentra_app
+The application uses the `countrydb` database. If it does not exist, create it and grant your user access.
 
-To use a dedicated database instead, have an admin run `CREATE DATABASE countrydb` and grant `zentra_app` access, then set `databaseName=countrydb` in `application.yml`.
+### Creating `countrydb`
+
+**Option 1: SQL Server Management Studio (SSMS)**
+
+1. Connect to your SQL Server instance (e.g. `localhost\SQLEXPRESS` or `hostname,port`).
+2. Run the script in `scripts/create-db.sql`:
+
+```sql
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'countrydb')
+BEGIN
+    CREATE DATABASE countrydb;
+END
+GO
+```
+
+3. **Create a SQL login** (if you use SQL authentication):
+
+```sql
+USE master;
+GO
+CREATE LOGIN your_username WITH PASSWORD = 'your_password';
+GO
+USE countrydb;
+CREATE USER your_username FOR LOGIN your_username;
+ALTER ROLE db_owner ADD MEMBER your_username;
+GO
+```
+
+4. Use `your_username` and `your_password` in your `.env` file.
+
+**Option 2: sqlcmd**
+
+```bash
+sqlcmd -S localhost\SQLEXPRESS -E -Q "IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'countrydb') CREATE DATABASE countrydb;"
+```
+
+`-E` uses Windows authentication. Use `-U username -P password` for SQL auth.
+
+### Existing database
+
+If `countrydb` already exists, ensure your `.env` user has `db_owner` or at least `db_datareader` and `db_datawriter` on `countrydb`.
 
 ## API Endpoints
 
