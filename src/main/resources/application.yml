@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: country-info-service
+  datasource:
+    url: jdbc:sqlserver://DESKTOP-K0286QP;instanceName=SQLEXPRESS;databaseName=countrydb;encrypt=true;trustServerCertificate=true
+    username: zentra_app
+    password: '@HollywoodApartments18'
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.SQLServerDialect
+
+server:
+  port: 8081
+
+countryinfo:
+  soap:
+    url: http://webservices.oorsprong.org/websamples.countryinfo/CountryInfoService.wso
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
