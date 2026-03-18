@@ -28,7 +28,7 @@ mvn spring-boot:run
 
 ### Swagger UI
 
-With the application running, open **http://localhost:8080/swagger-ui.html** to explore and test the API interactively.
+With the application running, open **http://localhost:8081/swagger-ui.html** to explore and test the API interactively.
 
 ## Build
 
@@ -49,23 +49,54 @@ To use a dedicated database instead, have an admin run `CREATE DATABASE countryd
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/countries` | Submit country name – normalizes to sentence case, fetches ISO code from SOAP API |
+| POST | `/api/countries` | Submit country name – normalizes, fetches ISO + full info from SOAP, persists to DB |
+| GET | `/api/countries` | List all persisted countries |
+| GET | `/api/countries/{id}` | Get country by database ID |
+| PUT | `/api/countries/{id}` | Update country by ID |
+| DELETE | `/api/countries/{id}` | Delete country by ID |
+| GET | `/api/countries/full-info/{isoCode}` | Fetch full country details from SOAP FullCountryInfo |
 
 ### Example: POST country name
 
 ```bash
-curl -X POST http://localhost:8080/api/countries \
+curl -X POST http://localhost:8081/api/countries \
   -H "Content-Type: application/json" \
   -d '{"name": "tanzania"}'
-# Response: {"name":"Tanzania","isoCode":"TZ"}
+# Response: {"name":"Tanzania","isoCode":"TZ","id":1}
 
-curl -X POST http://localhost:8080/api/countries \
+curl -X POST http://localhost:8081/api/countries \
   -H "Content-Type: application/json" \
   -d '{"name": "KENYA"}'
-# Response: {"name":"Kenya","isoCode":"KE"}
+# Response: {"name":"Kenya","isoCode":"KE","id":1}
+```
+
+### Example: GET full country info by ISO code
+
+```bash
+curl http://localhost:8081/api/countries/full-info/KE
+# Response: {"isoCode":"KE","name":"Kenya","capitalCity":"Nairobi","phoneCode":"254","continentCode":"AF","currencyIsoCode":"KES","countryFlag":"http://..."}
+```
+
+### Example: CRUD operations
+
+```bash
+# List all countries
+curl http://localhost:8081/api/countries
+
+# Get country by ID
+curl http://localhost:8081/api/countries/1
+
+# Update country
+curl -X PUT http://localhost:8081/api/countries/1 -H "Content-Type: application/json" \
+  -d '{"name":"Kenya","capitalCity":"Nairobi","phoneCode":"254","continentCode":"AF","currencyIsoCode":"KES","countryFlag":"http://..."}'
+
+# Delete country
+curl -X DELETE http://localhost:8081/api/countries/1
 ```
 
 ## Case Study Phases
+
+Reference: [Step-by-Step Resolution Plan](docs/RESOLUTION_PLAN.md) – full phased implementation guide.
 
 - **Phase 1** – Project setup (Spring Boot, Git, Maven wrapper)
 - **Phase 2** – [SoapUI Setup](docs/SOAPUI_SETUP.md) – Import WSDL, verify CountryISOCode and FullCountryInfo

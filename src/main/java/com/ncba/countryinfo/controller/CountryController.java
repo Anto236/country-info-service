@@ -1,13 +1,19 @@
 package com.ncba.countryinfo.controller;
 
+import com.ncba.countryinfo.dto.CountryFullInfoResponse;
+import com.ncba.countryinfo.dto.CountryInfoResponse;
 import com.ncba.countryinfo.dto.CountryNameRequest;
 import com.ncba.countryinfo.dto.CountryNameResponse;
+import com.ncba.countryinfo.dto.CountryUpdateRequest;
+import com.ncba.countryinfo.model.entity.CountryInfo;
 import com.ncba.countryinfo.service.CountryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/countries")
@@ -26,5 +32,53 @@ public class CountryController {
             @Valid @RequestBody CountryNameRequest request) {
         CountryNameResponse response = countryService.processCountryName(request.name());
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get full country info by ISO code", description = "Fetches full country details (name, capital, currency, etc.) from SOAP FullCountryInfo")
+    @GetMapping("/full-info/{isoCode}")
+    public ResponseEntity<CountryFullInfoResponse> getFullCountryInfo(
+            @PathVariable String isoCode) {
+        CountryFullInfoResponse response = countryService.getFullCountryInfo(isoCode.toUpperCase());
+        return response != null ? ResponseEntity.ok(response) : ResponseEntity.notFound().build();
+    }
+
+    @Operation(summary = "List all countries", description = "Returns all persisted country records from the database")
+    @GetMapping
+    public ResponseEntity<List<CountryInfoResponse>> getAllCountries() {
+        List<CountryInfo> entities = countryService.findAll();
+        List<CountryInfoResponse> responses = entities.stream()
+                .map(CountryInfoResponse::fromEntity)
+                .toList();
+        return ResponseEntity.ok(responses);
+    }
+
+    @Operation(summary = "Get country by ID", description = "Returns a single country record by database ID")
+    @GetMapping("/{id}")
+    public ResponseEntity<CountryInfoResponse> getCountryById(@PathVariable Long id) {
+        return countryService.findById(id)
+                .map(CountryInfoResponse::fromEntity)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Update country", description = "Updates an existing country record by ID")
+    @PutMapping("/{id}")
+    public ResponseEntity<CountryInfoResponse> updateCountry(
+            @PathVariable Long id,
+            @Valid @RequestBody CountryUpdateRequest request) {
+        return countryService.updateById(id, request)
+                .map(CountryInfoResponse::fromEntity)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @Operation(summary = "Delete country", description = "Deletes a country record by ID")
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCountry(@PathVariable Long id) {
+        if (countryService.findById(id).isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        countryService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
