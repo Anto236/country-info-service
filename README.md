@@ -28,13 +28,42 @@ mvn spring-boot:run
 
 ### Swagger UI
 
-With the application running, open **http://localhost:8081/swagger-ui.html** to explore and test the API interactively.
+With the application running (via `mvn spring-boot:run` or Docker), use Swagger to explore and test the API interactively.
+
+| Resource | URL |
+|----------|-----|
+| **Swagger UI** | http://localhost:8081/swagger-ui.html |
+| **OpenAPI JSON** | http://localhost:8081/v3/api-docs |
+
+**How to use:**
+1. Open **http://localhost:8081/swagger-ui.html** in your browser.
+2. Expand an endpoint (e.g. `POST /api/countries`).
+3. Click **Try it out**, edit the request body if needed.
+4. Click **Execute** to send the request.
+5. View the response (status code and body) below.
+
+The same URLs apply when running via Docker (`-p 8081:8081`).
 
 ## Build
 
 ```bash
 mvn clean package
 ```
+
+## Docker
+
+```bash
+# Build image
+docker build -t country-info-service .
+
+# Create .env from template (edit with your credentials)
+cp .env.example .env
+
+# Run using .env for credentials
+docker run -p 8081:8081 --env-file .env country-info-service
+```
+
+Use `host.docker.internal` in the datasource URL to reach MSSQL on the host from the container. `.env` is gitignored.
 
 ## Database
 
@@ -104,7 +133,57 @@ Reference: [Step-by-Step Resolution Plan](docs/RESOLUTION_PLAN.md) – full phas
 - **Phase 4–5** – SOAP integration (CountryISOCode, FullCountryInfo)
 - **Phase 6** – Database persistence
 - **Phase 7** – CRUD REST APIs
-- **Phase 9** – Docker, documentation
+- **Phase 8** – Logging (SLF4J), error handling (GlobalExceptionHandler), validation
+- **Phase 9** – [Docker](#docker), [SoapUI setup](docs/SOAPUI_SETUP.md)
+- **Phase 10** – [Version control & sharing](#version-control--sharing)
+
+## Version control & sharing
+
+1. **Push to remote** (GitHub/GitLab/Bitbucket):
+   ```bash
+   git add -A && git commit -m "Complete country-info-service (Phases 1-10)"
+   git push origin main
+   ```
+
+2. **Grant access** – Add `appdevelopment@ncbagroup.com` as collaborator:
+   - **GitHub:** Repository → Settings → Collaborators → Add people
+   - **GitLab:** Project → Members → Invite member
+   - **Bitbucket:** Repository settings → User and group access
+
+3. **Verify** – Ensure all work is committed and pushed before handover.
+
+## Error Handling
+
+The API returns consistent error responses:
+
+| Status | When |
+|--------|------|
+| 400 Bad Request | Validation failed (e.g. empty name, name too long) |
+| 404 Not Found | Country not found by ID or ISO code |
+| 502 Bad Gateway | SOAP service unavailable or returned error |
+| 500 Internal Server Error | Unexpected server error |
+
+All error responses use a consistent `ErrorResponse` structure with `statusCode`, `error`, `detail`, and optional `fieldErrors`:
+```json
+{
+  "statusCode": 404,
+  "error": "Not found",
+  "detail": "Country not found: 999",
+  "timestamp": "2026-03-18T10:00:00.000Z",
+  "fieldErrors": null
+}
+```
+
+Validation errors include field-level details:
+```json
+{
+  "statusCode": 400,
+  "error": "Validation failed",
+  "detail": "Invalid request body",
+  "timestamp": "...",
+  "fieldErrors": [{"field": "name", "message": "Country name is required"}]
+}
+```
 
 ## Project Structure
 
@@ -118,5 +197,6 @@ country-info-service/
 │   ├── service/            # Business logic layer
 │   └── util/               # Utilities (e.g. StringUtils)
 ├── docs/                   # Setup and run documentation
+├── Dockerfile              # Multi-stage build
 └── pom.xml
 ```
